@@ -1,3 +1,4 @@
+import '../models/focus_task.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// SQLite storage for FocusForge. Four tables:
@@ -84,6 +85,71 @@ class DatabaseHelper {
           )
         ''');
       },
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Tasks
+  // ------------------------------------------------------------------
+
+  Future<int> insertTask(FocusTask task) async {
+    final db = await database;
+    return db.insert('tasks', task.toMap());
+  }
+
+  Future<List<FocusTask>> getAllTasks() async {
+    final db = await database;
+    final rows = await db.query(
+      'tasks',
+      orderBy: 'is_completed ASC, created_at DESC',
+    );
+    return rows.map(FocusTask.fromMap).toList();
+  }
+
+  Future<List<FocusTask>> getActiveTasks() async {
+    final db = await database;
+    final rows = await db.query(
+      'tasks',
+      where: 'is_completed = ?',
+      whereArgs: [0],
+      orderBy: 'created_at DESC',
+    );
+    return rows.map(FocusTask.fromMap).toList();
+  }
+
+  Future<FocusTask?> getTaskById(int id) async {
+    final db = await database;
+    final rows = await db.query('tasks', where: 'id = ?', whereArgs: [id]);
+    if (rows.isEmpty) return null;
+    return FocusTask.fromMap(rows.first);
+  }
+
+  Future<int> updateTask(FocusTask task) async {
+    final db = await database;
+    return db.update(
+      'tasks',
+      task.toMap(),
+      where: 'id = ?',
+      whereArgs: [task.id],
+    );
+  }
+
+  Future<int> deleteTask(int id) async {
+    final db = await database;
+    return db.delete('tasks', where: 'id = ?', whereArgs: [id]);
+  }
+
+  /// Adds completed focus time to a task after a session ends.
+  Future<void> addFocusTimeToTask(int taskId, int seconds) async {
+    final db = await database;
+    await db.rawUpdate(
+      '''
+      UPDATE tasks
+      SET total_focus_seconds = total_focus_seconds + ?,
+          completed_sessions = completed_sessions + 1
+      WHERE id = ?
+      ''',
+      [seconds, taskId],
     );
   }
 
