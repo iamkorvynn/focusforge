@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../models/focus_task.dart';
 import '../models/timer_phase.dart';
 import '../services/timer_controller.dart';
 import '../theme/app_theme.dart';
@@ -49,6 +50,10 @@ class HomeScreen extends StatelessWidget {
                 _buildControls(context, color),
                 const SizedBox(height: 24),
                 _buildCycleDots(context),
+                const SizedBox(height: 16),
+                _buildTaskPicker(context),
+                const SizedBox(height: 16),
+                _buildDailyGoal(context),
               ],
             ),
           ),
@@ -96,6 +101,82 @@ class HomeScreen extends StatelessWidget {
           label: const Text('Skip'),
         ),
       ],
+    );
+  }
+
+  /// Picks which task the next focus session counts toward.
+  Widget _buildTaskPicker(BuildContext context) {
+    final activeTasks =
+        controller.tasks.where((t) => !t.isCompleted).toList();
+    final current = controller.currentTask;
+    final value = current != null &&
+            activeTasks.any((t) => t.id == current.id)
+        ? current
+        : null;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: DropdownButtonFormField<FocusTask?>(
+          initialValue: value,
+          decoration: const InputDecoration(
+            labelText: 'Focusing on',
+            border: InputBorder.none,
+          ),
+          items: [
+            const DropdownMenuItem<FocusTask?>(
+              value: null,
+              child: Text('No task — just focus'),
+            ),
+            ...activeTasks.map(
+              (task) => DropdownMenuItem<FocusTask?>(
+                value: task,
+                child: Text(task.title),
+              ),
+            ),
+          ],
+          onChanged: (task) => controller.selectTask(task),
+        ),
+      ),
+    );
+  }
+
+  /// Today's progress against the daily focus goal.
+  Widget _buildDailyGoal(BuildContext context) {
+    final theme = Theme.of(context);
+    final goalSeconds = controller.settings.dailyGoalMinutes * 60;
+    final doneSeconds = controller.todayFocusSeconds;
+    final fraction = goalSeconds == 0
+        ? 0.0
+        : (doneSeconds / goalSeconds).clamp(0.0, 1.0);
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.flag, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  'Today: ${formatSecondsShort(doneSeconds)} of '
+                  '${formatSecondsShort(goalSeconds)} goal',
+                  style: theme.textTheme.titleSmall,
+                ),
+                const Spacer(),
+                Text(
+                  '${controller.todaySessions} sessions',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            LinearProgressIndicator(value: fraction),
+          ],
+        ),
+      ),
     );
   }
 

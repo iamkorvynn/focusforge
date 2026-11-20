@@ -36,6 +36,10 @@ class TimerController extends ChangeNotifier {
   FocusTask? currentTask;
   List<SessionRecord> recentSessions = [];
 
+  /// Today's completed focus time, kept fresh after every logged session.
+  int todayFocusSeconds = 0;
+  int todaySessions = 0;
+
   bool _initialized = false;
   bool get initialized => _initialized;
 
@@ -62,6 +66,7 @@ class TimerController extends ChangeNotifier {
     _timer.settings = _settings;
     tasks = await _db.getAllTasks();
     recentSessions = await _db.getRecentSessions(limit: 50);
+    await _refreshToday();
     await _notifications.init();
     await _restoreSavedTimer();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
@@ -235,6 +240,20 @@ class TimerController extends ChangeNotifier {
       tasks = await _db.getAllTasks();
     }
     recentSessions = await _db.getRecentSessions(limit: 50);
+    await _refreshToday();
+  }
+
+  /// Recomputes today's totals from the database.
+  Future<void> _refreshToday() async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final sessions = await _db.getFocusSessionsBetween(startOfDay, now);
+    var total = 0;
+    for (final session in sessions) {
+      total += session.actualSeconds;
+    }
+    todayFocusSeconds = total;
+    todaySessions = sessions.length;
   }
 
   // --- Tasks ------------------------------------------------------------
