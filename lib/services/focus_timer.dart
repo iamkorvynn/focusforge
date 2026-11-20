@@ -49,6 +49,15 @@ class FocusTimer {
   /// Task the current focus session is linked to, if any.
   int? taskId;
 
+  /// Details of the most recently finished phase, captured before the
+  /// timer advances to the next phase. The controller reads these in
+  /// [onPhaseFinished] to log the session.
+  TimerPhase? lastFinishedPhase;
+  int lastFinishedPlannedSeconds = 0;
+  int lastFinishedActualSeconds = 0;
+  DateTime? lastFinishedStartedAt;
+  int? lastFinishedTaskId;
+
   double get progress {
     if (totalSeconds <= 0) return 0;
     return 1 - (remainingSeconds / totalSeconds);
@@ -127,6 +136,13 @@ class FocusTimer {
 
   void _finish({required bool completed}) {
     final finishedPhase = phase;
+    // Capture the finished run before advancing to the next phase.
+    lastFinishedPhase = finishedPhase;
+    lastFinishedPlannedSeconds = totalSeconds;
+    lastFinishedActualSeconds =
+        completed ? totalSeconds : totalSeconds - remainingSeconds;
+    lastFinishedStartedAt = startedAt;
+    lastFinishedTaskId = taskId;
     status = TimerStatus.idle;
     endsAt = null;
     if (completed && finishedPhase == TimerPhase.focus) {
