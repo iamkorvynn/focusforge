@@ -172,7 +172,7 @@ void main() {
       final now = DateTime(2026, 11, 20, 10, 0, 0);
       final timer = FocusTimer(
         settings: shortSettings(),
-        onPhaseFinished: (_, __) => finished = true,
+        onPhaseFinished: (_, _) => finished = true,
       );
       timer.restore(
         savedPhase: TimerPhase.focus,

@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'package:focusforge/main.dart';
@@ -13,13 +12,18 @@ void main() {
     await databaseFactoryFfi.deleteDatabase('$path/focusforge.db');
   });
 
-  // The controller runs a 1-second periodic ticker, so pumpAndSettle would
-  // never settle. Pump fixed durations instead.
+  // The controller's init() does real async work (database open) which
+  // only progresses in real time, while its continuations only run on
+  // pump. Alternate runAsync delays with pumps until the app is ready.
   Future<void> pumpApp(WidgetTester tester) async {
     await tester.pumpWidget(const FocusForgeApp());
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.pump(const Duration(milliseconds: 300));
+    for (var i = 0; i < 30; i++) {
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+      });
+      await tester.pump();
+      if (find.text('FocusForge').evaluate().isNotEmpty) return;
+    }
   }
 
   testWidgets('app starts empty on the timer with 25:00', (tester) async {
@@ -33,10 +37,17 @@ void main() {
   testWidgets('start button begins the countdown', (tester) async {
     await pumpApp(tester);
     await tester.tap(find.text('Start'));
-    await tester.pump();
+    // The ticker fires on the next fake second and rebuilds the screen.
+    await tester.pump(const Duration(seconds: 1));
     expect(find.text('Pause'), findsOneWidget);
+    // Let two real seconds pass, then let the ticker fire: the countdown
+    // is wall-clock based, so the time must have moved off 25:00.
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(seconds: 2));
+    });
     await tester.pump(const Duration(seconds: 2));
-    expect(find.text('24:58'), findsOneWidget);
+    expect(find.text('25:00'), findsNothing);
+    expect(find.text('Pause'), findsOneWidget);
   });
 
   testWidgets('tasks tab shows the empty state', (tester) async {
