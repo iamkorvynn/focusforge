@@ -32,6 +32,15 @@ dependencies:
     sdk: flutter
   material_ui: ^1.1.0
 
+  # Local storage for tasks, sessions, settings and timer state.
+  sqflite: ^2.4.2
+  # Session-end alerts (sound + vibration on the notification channel).
+  flutter_local_notifications: 22.3.3
+  # Runtime notification permission on Android 13+.
+  permission_handler: ^12.0.0
+  # Short vibration pulse when a session ends.
+  vibration: ^2.0.1
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -39,6 +48,9 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
+  # In-memory SQLite for database tests on the VM.
+  sqflite_common_ffi: ^2.3.6
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
