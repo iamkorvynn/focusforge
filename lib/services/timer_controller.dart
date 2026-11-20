@@ -40,6 +40,10 @@ class TimerController extends ChangeNotifier {
   int todayFocusSeconds = 0;
   int todaySessions = 0;
 
+  /// All-time totals, kept fresh after every logged session.
+  int allTimeFocusSeconds = 0;
+  int allTimeSessions = 0;
+
   bool _initialized = false;
   bool get initialized => _initialized;
 
@@ -65,7 +69,7 @@ class TimerController extends ChangeNotifier {
     _settings = await _db.getSettings();
     _timer.settings = _settings;
     tasks = await _db.getAllTasks();
-    recentSessions = await _db.getRecentSessions(limit: 50);
+    recentSessions = await _db.getRecentSessions(limit: 200);
     await _refreshToday();
     await _notifications.init();
     await _restoreSavedTimer();
@@ -239,7 +243,7 @@ class TimerController extends ChangeNotifier {
       await _db.addFocusTimeToTask(taskId, actualSeconds);
       tasks = await _db.getAllTasks();
     }
-    recentSessions = await _db.getRecentSessions(limit: 50);
+    recentSessions = await _db.getRecentSessions(limit: 200);
     await _refreshToday();
   }
 
@@ -254,6 +258,8 @@ class TimerController extends ChangeNotifier {
     }
     todayFocusSeconds = total;
     todaySessions = sessions.length;
+    allTimeFocusSeconds = await _db.getTotalFocusSeconds();
+    allTimeSessions = await _db.getTotalCompletedSessions();
   }
 
   // --- Tasks ------------------------------------------------------------
@@ -327,6 +333,10 @@ class TimerController extends ChangeNotifier {
   Future<void> clearHistory() async {
     await _db.clearAllSessions();
     recentSessions = [];
+    todayFocusSeconds = 0;
+    todaySessions = 0;
+    allTimeFocusSeconds = 0;
+    allTimeSessions = 0;
     notifyListeners();
   }
 
