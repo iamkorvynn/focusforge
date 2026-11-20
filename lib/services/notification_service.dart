@@ -1,6 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:vibration/vibration.dart';
 
 import '../models/timer_phase.dart';
 
@@ -92,12 +91,6 @@ class NotificationService {
         body: body,
         notificationDetails: details,
       );
-      if (vibrationEnabled) {
-        final hasVibrator = await Vibration.hasVibrator();
-        if (hasVibrator == true) {
-          await Vibration.vibrate(duration: 400);
-        }
-      }
     } catch (_) {
       // Alerts are best-effort; a failure here must not break the timer.
     }

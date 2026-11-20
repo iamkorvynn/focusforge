@@ -28,7 +28,6 @@ No accounts, no ads, no network calls, no demo data: the app starts empty.
 - `sqflite` for local storage (tasks, sessions, settings, timer state)
 - `flutter_local_notifications` 22.3.3 for session-end alerts
 - `permission_handler` 12.x for the notification permission
-- `vibration` for the end-of-session pulse
 - Core library desugaring enabled; release lint disabled (AGP lint
   crashes on this toolchain)
 
