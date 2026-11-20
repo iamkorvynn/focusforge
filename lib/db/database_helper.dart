@@ -1,4 +1,5 @@
 import '../models/focus_task.dart';
+import '../models/session_record.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// SQLite storage for FocusForge. Four tables:
@@ -151,6 +152,75 @@ class DatabaseHelper {
       ''',
       [seconds, taskId],
     );
+  }
+
+  // ------------------------------------------------------------------
+  // Sessions
+  // ------------------------------------------------------------------
+
+  Future<int> insertSession(SessionRecord session) async {
+    final db = await database;
+    return db.insert('sessions', session.toMap());
+  }
+
+  /// Most recent sessions first, newest at the top of the history list.
+  Future<List<SessionRecord>> getRecentSessions({int limit = 100}) async {
+    final db = await database;
+    final rows = await db.query(
+      'sessions',
+      orderBy: 'ended_at DESC',
+      limit: limit,
+    );
+    return rows.map(SessionRecord.fromMap).toList();
+  }
+
+  /// Completed focus sessions between two instants (inclusive).
+  Future<List<SessionRecord>> getFocusSessionsBetween(
+    DateTime from,
+    DateTime to,
+  ) async {
+    final db = await database;
+    final rows = await db.query(
+      'sessions',
+      where: 'phase = ? AND completed = 1 AND ended_at >= ? AND ended_at <= ?',
+      whereArgs: [
+        'focus',
+        from.millisecondsSinceEpoch,
+        to.millisecondsSinceEpoch,
+      ],
+      orderBy: 'ended_at ASC',
+    );
+    return rows.map(SessionRecord.fromMap).toList();
+  }
+
+  /// Total completed focus seconds across all time.
+  Future<int> getTotalFocusSeconds() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      "SELECT COALESCE(SUM(actual_seconds), 0) AS total FROM sessions "
+      "WHERE phase = 'focus' AND completed = 1",
+    );
+    return (rows.first['total'] as int?) ?? 0;
+  }
+
+  /// Number of completed focus sessions across all time.
+  Future<int> getTotalCompletedSessions() async {
+    final db = await database;
+    final rows = await db.rawQuery(
+      "SELECT COUNT(*) AS total FROM sessions "
+      "WHERE phase = 'focus' AND completed = 1",
+    );
+    return (rows.first['total'] as int?) ?? 0;
+  }
+
+  Future<int> deleteSession(int id) async {
+    final db = await database;
+    return db.delete('sessions', where: 'id = ?', whereArgs: [id]);
+  }
+
+  Future<int> clearAllSessions() async {
+    final db = await database;
+    return db.delete('sessions');
   }
 
   /// Closes the database. Used by tests; the app itself never closes it.
