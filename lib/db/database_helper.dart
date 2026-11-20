@@ -1,5 +1,7 @@
+import '../models/app_settings.dart';
 import '../models/focus_task.dart';
 import '../models/session_record.dart';
+import '../models/timer_phase.dart';
 import 'package:sqflite/sqflite.dart';
 
 /// SQLite storage for FocusForge. Four tables:
@@ -221,6 +223,74 @@ class DatabaseHelper {
   Future<int> clearAllSessions() async {
     final db = await database;
     return db.delete('sessions');
+  }
+
+  // ------------------------------------------------------------------
+  // Settings (single row, id = 1)
+  // ------------------------------------------------------------------
+
+  Future<AppSettings> getSettings() async {
+    final db = await database;
+    final rows = await db.query('settings', where: 'id = ?', whereArgs: [1]);
+    if (rows.isEmpty) return AppSettings();
+    return AppSettings.fromMap(rows.first);
+  }
+
+  Future<void> saveSettings(AppSettings settings) async {
+    final db = await database;
+    await db.insert(
+      'settings',
+      settings.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Live timer state (single row, id = 1)
+  // ------------------------------------------------------------------
+
+  /// Saves the live timer so it can be restored after the app is killed.
+  /// `endsAt` is null when the timer is paused or idle.
+  Future<void> saveTimerState({
+    required TimerPhase phase,
+    required int remainingSeconds,
+    required int totalSeconds,
+    DateTime? endsAt,
+    required bool isRunning,
+    int? taskId,
+    required DateTime startedAt,
+    required int completedInCycle,
+  }) async {
+    final db = await database;
+    await db.insert(
+      'timer_state',
+      {
+        'id': 1,
+        'phase': phase.storageKey,
+        'remaining_seconds': remainingSeconds,
+        'total_seconds': totalSeconds,
+        'ends_at': endsAt?.millisecondsSinceEpoch,
+        'is_running': isRunning ? 1 : 0,
+        'task_id': taskId,
+        'started_at': startedAt.millisecondsSinceEpoch,
+        'completed_in_cycle': completedInCycle,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Returns the saved timer row, or null when no timer was ever started.
+  Future<Map<String, Object?>?> getTimerState() async {
+    final db = await database;
+    final rows =
+        await db.query('timer_state', where: 'id = ?', whereArgs: [1]);
+    if (rows.isEmpty) return null;
+    return rows.first;
+  }
+
+  Future<void> clearTimerState() async {
+    final db = await database;
+    await db.delete('timer_state', where: 'id = ?', whereArgs: [1]);
   }
 
   /// Closes the database. Used by tests; the app itself never closes it.
