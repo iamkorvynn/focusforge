@@ -11,13 +11,14 @@ void main() {
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+    // In-memory database: this file never touches the real database file,
+    // so it cannot disturb other test files running in parallel.
+    DatabaseHelper.useInMemory = true;
   });
 
   setUp(() async {
-    // Fresh empty database for every test.
+    // Fresh empty database for every test (closing drops the in-memory DB).
     await DatabaseHelper.instance.close();
-    final path = await getDatabasesPath();
-    await databaseFactoryFfi.deleteDatabase('$path/focusforge.db');
   });
 
   group('tasks', () {

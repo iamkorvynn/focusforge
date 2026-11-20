@@ -1,15 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'package:focusforge/db/database_helper.dart';
 import 'package:focusforge/main.dart';
 
 void main() {
   setUpAll(() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
-    // Guarantee the app starts empty even if another test file ran first.
-    final path = await getDatabasesPath();
-    await databaseFactoryFfi.deleteDatabase('$path/focusforge.db');
+    // In-memory database: this file never touches the real database file,
+    // so it cannot disturb other test files running in parallel.
+    DatabaseHelper.useInMemory = true;
   });
 
   // The controller's init() does real async work (database open) which

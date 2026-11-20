@@ -2,6 +2,7 @@ import '../models/app_settings.dart';
 import '../models/focus_task.dart';
 import '../models/session_record.dart';
 import '../models/timer_phase.dart';
+
 import 'package:sqflite/sqflite.dart';
 
 /// SQLite storage for FocusForge. Four tables:
@@ -20,6 +21,11 @@ class DatabaseHelper {
   static const String _dbName = 'focusforge.db';
   static const int _dbVersion = 1;
 
+  /// When true, the database lives in memory instead of a file. Tests set
+  /// this so parallel test files never share (and delete) one database
+  /// file — deleting an open SQLite file makes other connections readonly.
+  static bool useInMemory = false;
+
   Database? _db;
 
   Future<Database> get database async {
@@ -30,12 +36,23 @@ class DatabaseHelper {
   }
 
   Future<Database> _open() async {
+    if (useInMemory) {
+      return openDatabase(
+        inMemoryDatabasePath,
+        version: _dbVersion,
+        onCreate: _createTables,
+      );
+    }
     final path = await getDatabasesPath();
     return openDatabase(
       '$path/$_dbName',
       version: _dbVersion,
-      onCreate: (db, version) async {
-        await db.execute('''
+      onCreate: _createTables,
+    );
+  }
+
+  Future<void> _createTables(Database db, int version) async {
+    await db.execute('''
           CREATE TABLE tasks (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
@@ -47,7 +64,7 @@ class DatabaseHelper {
             completed_sessions INTEGER NOT NULL DEFAULT 0
           )
         ''');
-        await db.execute('''
+    await db.execute('''
           CREATE TABLE sessions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             task_id INTEGER,
@@ -59,7 +76,7 @@ class DatabaseHelper {
             completed INTEGER NOT NULL DEFAULT 1
           )
         ''');
-        await db.execute('''
+    await db.execute('''
           CREATE TABLE settings (
             id INTEGER PRIMARY KEY,
             focus_minutes INTEGER NOT NULL,
@@ -74,7 +91,7 @@ class DatabaseHelper {
             auto_start_focus INTEGER NOT NULL
           )
         ''');
-        await db.execute('''
+    await db.execute('''
           CREATE TABLE timer_state (
             id INTEGER PRIMARY KEY,
             phase TEXT NOT NULL,
@@ -87,8 +104,6 @@ class DatabaseHelper {
             completed_in_cycle INTEGER NOT NULL
           )
         ''');
-      },
-    );
   }
 
   // ------------------------------------------------------------------
@@ -262,28 +277,23 @@ class DatabaseHelper {
     required int completedInCycle,
   }) async {
     final db = await database;
-    await db.insert(
-      'timer_state',
-      {
-        'id': 1,
-        'phase': phase.storageKey,
-        'remaining_seconds': remainingSeconds,
-        'total_seconds': totalSeconds,
-        'ends_at': endsAt?.millisecondsSinceEpoch,
-        'is_running': isRunning ? 1 : 0,
-        'task_id': taskId,
-        'started_at': startedAt.millisecondsSinceEpoch,
-        'completed_in_cycle': completedInCycle,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('timer_state', {
+      'id': 1,
+      'phase': phase.storageKey,
+      'remaining_seconds': remainingSeconds,
+      'total_seconds': totalSeconds,
+      'ends_at': endsAt?.millisecondsSinceEpoch,
+      'is_running': isRunning ? 1 : 0,
+      'task_id': taskId,
+      'started_at': startedAt.millisecondsSinceEpoch,
+      'completed_in_cycle': completedInCycle,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
   /// Returns the saved timer row, or null when no timer was ever started.
   Future<Map<String, Object?>?> getTimerState() async {
     final db = await database;
-    final rows =
-        await db.query('timer_state', where: 'id = ?', whereArgs: [1]);
+    final rows = await db.query('timer_state', where: 'id = ?', whereArgs: [1]);
     if (rows.isEmpty) return null;
     return rows.first;
   }
