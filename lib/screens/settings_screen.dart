@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../models/app_settings.dart';
 import '../services/timer_controller.dart';
 
 /// Timer durations, daily goal, alerts and auto-start behaviour.

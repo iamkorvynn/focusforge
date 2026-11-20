@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../models/session_record.dart';
+import '../models/timer_phase.dart';
 import '../utils/time_format.dart';
 
 /// One row in the session history list.

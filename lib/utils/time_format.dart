@@ -1,5 +1,5 @@
-/// Small, pure helpers for showing durations and dates in the UI.
-/// Kept free of Flutter imports so they are trivially unit-testable.
+// Small, pure helpers for showing durations and dates in the UI.
+// Kept free of Flutter imports so they are trivially unit-testable.
 
 /// Formats a duration as `MM:SS` (or `H:MM:SS` once it passes an hour).
 String formatDuration(Duration duration) {
